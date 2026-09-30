@@ -1,18 +1,40 @@
 'use client'
 import { useState } from 'react'
+import { auth, db } from '@/lib/firebase'
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
 
 export default function Register() {
   const [form, setForm] = useState({
     name: '', email: '', matric: '', department: '', password: ''
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Account created! (Firebase coming soon)')
+    setLoading(true)
+    setError('')
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password)
+      await updateProfile(userCredential.user, { displayName: form.name })
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        name: form.name,
+        email: form.email,
+        matric: form.matric,
+        department: form.department,
+        createdAt: new Date().toISOString()
+      })
+      window.location.href = '/dashboard'
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const departments = [
@@ -91,6 +113,12 @@ export default function Register() {
         </div>
 
         <form onSubmit={handleSubmit} className="glass rounded-2xl p-8 space-y-4">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
           <div>
             <label className="text-sm text-gray-400 mb-1 block">Full Name</label>
             <input
@@ -167,9 +195,10 @@ export default function Register() {
 
           <button
             type="submit"
-            className="w-full bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 rounded-xl transition glow mt-2"
+            disabled={loading}
+            className="w-full bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 rounded-xl transition glow mt-2 disabled:opacity-50"
           >
-            Create Account
+            {loading ? 'Creating Account...' : 'Create Account'}
           </button>
 
           <p className="text-center text-gray-400 text-sm">
@@ -180,4 +209,4 @@ export default function Register() {
       </div>
     </main>
   )
-}
+    }
