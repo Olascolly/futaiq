@@ -1,16 +1,29 @@
 'use client'
 import { useState } from 'react'
+import { auth } from '@/lib/firebase'
+import { signInWithEmailAndPassword } from 'firebase/auth'
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Login successful! (Firebase coming soon)')
+    setLoading(true)
+    setError('')
+    try {
+      await signInWithEmailAndPassword(auth, form.email, form.password)
+      window.location.href = '/dashboard'
+    } catch (err: any) {
+      setError('Invalid email or password. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -22,6 +35,12 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit} className="glass rounded-2xl p-8 space-y-4">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
           <div>
             <label className="text-sm text-gray-400 mb-1 block">Email Address</label>
             <input
@@ -56,9 +75,10 @@ export default function Login() {
 
           <button
             type="submit"
-            className="w-full bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 rounded-xl transition glow"
+            disabled={loading}
+            className="w-full bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 rounded-xl transition glow disabled:opacity-50"
           >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
           </button>
 
           <p className="text-center text-gray-400 text-sm">
@@ -69,4 +89,4 @@ export default function Login() {
       </div>
     </main>
   )
-}
+        }
