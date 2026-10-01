@@ -56,7 +56,7 @@ export default function AIAssistant() {
       })
 
       const data = await response.json()
-      const reply = data.content?.[0]?.text || "Sorry, I couldn't get a response. Please try again."
+      const reply = data.text || data.error || "Sorry, I couldn't get a response. Please try again."
       setMessages(prev => [...prev, { role: 'assistant', content: reply }])
     } catch (err) {
       setMessages(prev => [...prev, {
