@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       contents: [
         {
           role: 'user',
-          parts: [{ text: lastMessage }]
+          parts: [{ text: `You are FUTA IQ Assistant for FUTA Nigeria students. Be brief, precise and clear. No markdown symbols like ** or ###. Use plain text only. Max 5 sentences per response unless a list is needed.\n\n${lastMessage}` }]
         }
       ]
     }
