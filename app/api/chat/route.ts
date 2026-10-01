@@ -5,8 +5,7 @@ export async function POST(req: NextRequest) {
     const { messages } = await req.json()
     const lastMessage = messages[messages.length - 1].content
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_KEY}`
-    
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${process.env.GEMINI_KEY}`
     const body = {
       contents: [
         {
