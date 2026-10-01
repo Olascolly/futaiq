@@ -1,19 +1,49 @@
 'use client'
-import { useState } from 'react'
-import { 
-  BookOpen, Clock, Trophy, Flame, 
+import { useState, useEffect } from 'react'
+import { auth, db } from '@/lib/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { useRouter } from 'next/navigation'
+import {
+  BookOpen, Clock, Trophy, Flame,
   ChevronRight, Bell, User, Home,
   Brain, Calculator, Swords, Star
 } from 'lucide-react'
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('home')
+  const [userData, setUserData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        router.push('/login')
+        return
+      }
+      const docRef = doc(db, 'users', user.uid)
+      const docSnap = await getDoc(docRef)
+      if (docSnap.exists()) {
+        setUserData(docSnap.data())
+      }
+      setLoading(false)
+    })
+    return () => unsubscribe()
+  }, [router])
+
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 17) return 'Good afternoon'
+    return 'Good evening'
+  }
 
   const stats = [
     { icon: BookOpen, label: 'Courses', value: '12', color: 'from-teal-500 to-teal-700' },
-    { icon: Clock, label: 'Tests Taken', value: '8', color: 'from-indigo-500 to-indigo-700' },
-    { icon: Trophy, label: 'Avg Score', value: '74%', color: 'from-amber-500 to-amber-700' },
-    { icon: Flame, label: 'Day Streak', value: '5', color: 'from-rose-500 to-rose-700' },
+    { icon: Clock, label: 'Tests Taken', value: '0', color: 'from-indigo-500 to-indigo-700' },
+    { icon: Trophy, label: 'Avg Score', value: '0%', color: 'from-amber-500 to-amber-700' },
+    { icon: Flame, label: 'Day Streak', value: '1', color: 'from-rose-500 to-rose-700' },
   ]
 
   const features = [
@@ -31,14 +61,25 @@ export default function Dashboard() {
     { course: 'CHE 101', action: 'Mock Test', score: '71%', time: '2 days ago' },
   ]
 
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-navy-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading your dashboard...</p>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-navy-900 pb-24">
       {/* Header */}
       <div className="px-6 pt-12 pb-6 flex items-center justify-between">
         <div>
-          <p className="text-gray-400 text-sm">Good morning 👋</p>
-          <h1 className="text-2xl font-bold text-white">John Doe</h1>
-          <p className="text-primary-400 text-xs mt-1">Computer Science • 200L</p>
+          <p className="text-gray-400 text-sm">{getGreeting()} 👋</p>
+          <h1 className="text-2xl font-bold text-white">{userData?.name || 'Student'}</h1>
+          <p className="text-primary-400 text-xs mt-1">{userData?.department || 'FUTA'}</p>
         </div>
         <div className="flex items-center gap-3">
           <button className="w-10 h-10 glass rounded-full flex items-center justify-center relative">
@@ -55,9 +96,9 @@ export default function Dashboard() {
       <div className="mx-6 mb-6 rounded-2xl p-6 bg-gradient-to-br from-primary-600 to-indigo-700 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-8 -translate-x-8" />
-        <p className="text-white/80 text-sm mb-1">Next exam in</p>
-        <h2 className="text-3xl font-bold text-white mb-1">12 Days</h2>
-        <p className="text-white/70 text-sm mb-4">Keep pushing! You're doing great 💪</p>
+        <p className="text-white/80 text-sm mb-1">Keep pushing!</p>
+        <h2 className="text-3xl font-bold text-white mb-1">Study Hard 💪</h2>
+        <p className="text-white/70 text-sm mb-4">Every question you practice gets you closer to an A.</p>
         <button className="bg-white text-primary-700 text-sm font-semibold px-4 py-2 rounded-xl">
           Start Studying →
         </button>
@@ -146,4 +187,4 @@ export default function Dashboard() {
       </div>
     </main>
   )
-}
+            }
