@@ -125,7 +125,11 @@ export default function AIAssistant() {
                 ? 'glass text-gray-200'
                 : 'bg-primary-500 text-white'
             }`}>
-              {msg.content}
+              {msg.content.split('\n').map((line, i) => (
+                <p key={i} className={line.startsWith('**') ? 'font-semibold mt-2' : 'mt-1'}>
+                  {line.replace(/\*\*/g, '').replace(/###/g, '').replace(/##/g, '').replace(/#/g, '')}
+                </p>
+              ))}
             </div>
           </div>
         ))}
