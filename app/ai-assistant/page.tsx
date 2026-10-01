@@ -44,24 +44,10 @@ export default function AIAssistant() {
     setLoading(true)
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_KEY || '',
-          'anthropic-version': '2023-06-01'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1024,
-          system: `You are FUTA IQ Assistant, an academic AI helper for students at the Federal University of Technology Akure (FUTA), Nigeria. You help students with:
-- Understanding course topics and concepts
-- Explaining past exam questions
-- Study tips and strategies
-- FUTA specific courses like MTH 101, PHY 101, CHE 101, BIO 101, GST 101, CSC 101 and more
-- General university level academics
-
-Be friendly, encouraging, and clear. Use simple language. When explaining concepts, give examples. Keep responses concise but complete.`,
           messages: [
             ...messages.map(m => ({ role: m.role, content: m.content })),
             { role: 'user', content: userMessage }
@@ -70,12 +56,12 @@ Be friendly, encouraging, and clear. Use simple language. When explaining concep
       })
 
       const data = await response.json()
-      const reply = data.content[0]?.text || "Sorry, I couldn't get a response. Please try again."
+      const reply = data.content?.[0]?.text || "Sorry, I couldn't get a response. Please try again."
       setMessages(prev => [...prev, { role: 'assistant', content: reply }])
     } catch (err) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "Sorry, I'm having trouble connecting right now. Please check your connection and try again."
+        content: "Sorry, I'm having trouble connecting right now. Please try again."
       }])
     } finally {
       setLoading(false)
@@ -159,7 +145,6 @@ Be friendly, encouraging, and clear. Use simple language. When explaining concep
           </div>
         )}
 
-        {/* Suggestions */}
         {messages.length === 1 && (
           <div className="space-y-2 mt-4">
             <p className="text-gray-500 text-xs text-center">Try asking:</p>
@@ -200,4 +185,4 @@ Be friendly, encouraging, and clear. Use simple language. When explaining concep
       </div>
     </main>
   )
-        }
+                                           }
