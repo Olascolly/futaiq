@@ -1,5 +1,5 @@
 export const MTH101 = [
-  { question: 'What is the derivative of x²?', options: ['x', '2x', '2x²', 'x³'], answer: 1, explanation: 'Power rule: d/dx(x²) = 2x' },
+  { question: 'What is the derivative of x²?', options: ['x', '2x', '2x²', '3x³'], answer: 1, explanation: 'Power rule: d/dx(x²) = 2x' },
   { question: 'What is the value of π to 2 decimal places?', options: ['3.12', '3.14', '3.16', '3.18'], answer: 1, explanation: 'π = 3.14159... rounds to 3.14' },
   { question: 'What is the integral of 2x dx?', options: ['x', 'x²', '2x²', 'x² + C'], answer: 3, explanation: '∫2x dx = x² + C' },
   { question: 'Solve: 2x + 5 = 15', options: ['x = 4', 'x = 5', 'x = 6', 'x = 10'], answer: 1, explanation: '2x = 10, x = 5' },
