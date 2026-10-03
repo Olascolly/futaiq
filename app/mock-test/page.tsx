@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock, CheckCircle, XCircle, ArrowLeft, RotateCcw } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, ArrowLeft, RotateCcw, Bot, Send } from 'lucide-react'
 import { questionBank, courses } from '@/lib/questions'
 
 const MODES = [
@@ -12,6 +12,89 @@ const MODES = [
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
+}
+
+function AIExplainer({ question, correctAnswer, userAnswer, explanation, onClose }: any) {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: `Let me explain this question for you!\n\n**Question:** ${question}\n\n**Correct Answer:** ${correctAnswer}\n\n${explanation}\n\nFeel free to ask me anything about this topic!` }
+  ])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return
+    const userMsg = input.trim()
+    setInput('')
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }])
+    setLoading(true)
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'user', content: `Context: The student got this CBT question wrong.\nQuestion: ${question}\nCorrect answer: ${correctAnswer}\nExplanation: ${explanation}\n\nStudent asks: ${userMsg}` }
+          ]
+        })
+      })
+      const data = await response.json()
+      setMessages(prev => [...prev, { role: 'assistant', content: data.text || 'Sorry, try again.' }])
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection error. Please try again.' }])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-end">
+      <div className="bg-white w-full rounded-t-3xl max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-indigo-500 rounded-full flex items-center justify-center">
+              <Bot size={16} className="text-white" />
+            </div>
+            <div>
+              <p className="font-bold text-gray-800 text-sm">FUTA IQ Assistant</p>
+              <p className="text-xs text-teal-500">Explaining your question</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 text-xl font-bold">✕</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${msg.role === 'assistant' ? 'bg-gray-100 text-gray-700' : 'bg-teal-500 text-white'}`}>
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex gap-1 px-4 py-3 bg-gray-100 rounded-2xl w-16">
+              <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          )}
+        </div>
+
+        <div className="px-4 py-3 border-t flex gap-2">
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            placeholder="Ask about this question..."
+            className="flex-1 bg-gray-100 rounded-xl px-4 py-2 text-sm text-gray-800 focus:outline-none"
+          />
+          <button onClick={sendMessage} disabled={!input.trim() || loading}
+            className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center disabled:opacity-50">
+            <Send size={16} className="text-white" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function MockTest() {
@@ -29,6 +112,7 @@ export default function MockTest() {
   const [endlessIndex, setEndlessIndex] = useState(0)
   const [endlessAnswer, setEndlessAnswer] = useState<number | null>(null)
   const [endlessScore, setEndlessScore] = useState({ correct: 0, total: 0 })
+  const [aiQuestion, setAiQuestion] = useState<any>(null)
 
   useEffect(() => {
     if (stage !== 'test' || selectedMode?.id === 'endless' || timeLeft <= 0) return
@@ -94,9 +178,7 @@ export default function MockTest() {
 
   const handleEndlessNext = () => {
     const nextIndex = endlessIndex + 1
-    if (nextIndex % endlessPool.length === 0) {
-      setEndlessPool(shuffle(endlessPool))
-    }
+    if (nextIndex % endlessPool.length === 0) setEndlessPool(shuffle(endlessPool))
     setEndlessIndex(nextIndex)
     setEndlessAnswer(null)
   }
@@ -128,17 +210,6 @@ export default function MockTest() {
     return { grade: 'F', label: 'Needs improvement', color: 'text-red-600' }
   }
 
-  // LOADING
-  if (stage === 'select' && !courses.length) return (
-    <main className="min-h-screen bg-navy-900 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold gradient-text mb-2">FUTA IQ</h1>
-        <p className="text-gray-400 text-sm">Loading...</p>
-      </div>
-    </main>
-  )
-
-  // SELECT COURSE
   if (stage === 'select') return (
     <main className="min-h-screen bg-navy-900">
       <div className="glass border-b border-white/10 px-4 py-4 flex items-center gap-3 sticky top-0 z-10">
@@ -168,7 +239,6 @@ export default function MockTest() {
     </main>
   )
 
-  // SELECT MODE
   if (stage === 'mode') return (
     <main className="min-h-screen bg-navy-900">
       <div className="glass border-b border-white/10 px-4 py-4 flex items-center gap-3 sticky top-0 z-10">
@@ -191,7 +261,6 @@ export default function MockTest() {
     </main>
   )
 
-  // ENDLESS MODE
   if (stage === 'test' && selectedMode?.id === 'endless') {
     const q = endlessPool[endlessIndex % endlessPool.length]
     const isAnswered = endlessAnswer !== null
@@ -199,12 +268,21 @@ export default function MockTest() {
 
     return (
       <main className="min-h-screen bg-gray-50 flex flex-col">
+        {aiQuestion && (
+          <AIExplainer
+            question={aiQuestion.question}
+            correctAnswer={aiQuestion.options[aiQuestion.answer]}
+            userAnswer={aiQuestion.options[endlessAnswer!]}
+            explanation={aiQuestion.explanation}
+            onClose={() => setAiQuestion(null)}
+          />
+        )}
         <div className="bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
           <div>
-            <p className="text-gray-800 font-bold text-sm">{selectedCourse?.code} — Endless Mode ♾️</p>
-            <p className="text-gray-500 text-xs">Question {endlessIndex + 1} • {endlessScore.correct}/{endlessScore.total} correct</p>
+            <p className="text-gray-800 font-bold text-sm">{selectedCourse?.code} — Endless ♾️</p>
+            <p className="text-gray-500 text-xs">#{endlessIndex + 1} • {endlessScore.correct}/{endlessScore.total} correct</p>
           </div>
-          <button onClick={() => setStage('select')} className="text-gray-400 text-xs border border-gray-200 px-3 py-1 rounded-full">Exit</button>
+          <button onClick={() => setStage('select')} className="text-gray-500 text-xs border border-gray-200 px-3 py-1 rounded-full">Exit</button>
         </div>
 
         <div className="flex-1 px-4 py-5 max-w-lg mx-auto w-full">
@@ -230,29 +308,33 @@ export default function MockTest() {
           </div>
 
           {isAnswered && (
-            <div className={`rounded-xl p-4 mb-4 text-sm ${isCorrect ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-              <div className="flex items-center gap-2 mb-1">
-                {isCorrect ? <CheckCircle size={16} className="text-green-600" /> : <XCircle size={16} className="text-red-600" />}
-                <span className={`font-semibold ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
-                  {isCorrect ? 'Correct!' : 'Incorrect'}
-                </span>
+            <>
+              <div className={`rounded-xl p-4 mb-3 text-sm ${isCorrect ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  {isCorrect ? <CheckCircle size={16} className="text-green-600" /> : <XCircle size={16} className="text-red-600" />}
+                  <span className={`font-semibold ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                    {isCorrect ? 'Correct!' : 'Incorrect'}
+                  </span>
+                </div>
+                <p className="text-gray-600">{q?.explanation}</p>
               </div>
-              <p className="text-gray-600">{q?.explanation}</p>
-            </div>
-          )}
-
-          {isAnswered && (
-            <button onClick={handleEndlessNext}
-              className="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm">
-              Next Question →
-            </button>
+              {!isCorrect && (
+                <button onClick={() => setAiQuestion(q)}
+                  className="w-full mb-3 py-2 rounded-xl border-2 border-teal-500 text-teal-600 font-semibold text-sm flex items-center justify-center gap-2">
+                  <Bot size={16} /> Ask AI to explain
+                </button>
+              )}
+              <button onClick={handleEndlessNext}
+                className="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm">
+                Next Question →
+              </button>
+            </>
           )}
         </div>
       </main>
     )
   }
 
-  // EXAM / PRACTICE TEST
   if (stage === 'test') {
     const q = questions[current]
     const userAnswer = answers[current]
@@ -260,6 +342,15 @@ export default function MockTest() {
 
     return (
       <main className="min-h-screen bg-gray-50 flex flex-col">
+        {aiQuestion && (
+          <AIExplainer
+            question={aiQuestion.question}
+            correctAnswer={aiQuestion.options[aiQuestion.answer]}
+            userAnswer={aiQuestion.options[userAnswer!]}
+            explanation={aiQuestion.explanation}
+            onClose={() => setAiQuestion(null)}
+          />
+        )}
         <div className="bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
           <div>
             <p className="text-gray-800 font-bold text-sm">{selectedCourse?.code} — {selectedMode?.label}</p>
@@ -303,8 +394,8 @@ export default function MockTest() {
             })}
           </div>
 
-          {showExplanation && selectedMode?.id !== 'exam' && (
-            <div className={`rounded-xl p-4 mb-4 text-sm ${userAnswer === q?.answer ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+          {showExplanation && selectedMode?.id === 'practice' && (
+            <div className={`rounded-xl p-4 mb-3 text-sm ${userAnswer === q?.answer ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
               <div className="flex items-center gap-2 mb-1">
                 {userAnswer === q?.answer
                   ? <CheckCircle size={16} className="text-green-600" />
@@ -315,6 +406,13 @@ export default function MockTest() {
               </div>
               <p className="text-gray-600">{q?.explanation}</p>
             </div>
+          )}
+
+          {showExplanation && selectedMode?.id === 'practice' && userAnswer !== q?.answer && (
+            <button onClick={() => setAiQuestion(q)}
+              className="w-full mb-3 py-2 rounded-xl border-2 border-teal-500 text-teal-600 font-semibold text-sm flex items-center justify-center gap-2">
+              <Bot size={16} /> Ask AI to explain
+            </button>
           )}
 
           <div className="flex gap-3">
@@ -346,10 +444,18 @@ export default function MockTest() {
     )
   }
 
-  // RESULT
   const grade = getGrade(score, questions.length)
   return (
     <main className="min-h-screen bg-gray-50 pb-12">
+      {aiQuestion && (
+        <AIExplainer
+          question={aiQuestion.question}
+          correctAnswer={aiQuestion.options[aiQuestion.answer]}
+          userAnswer={aiQuestion.options[answers[questions.indexOf(aiQuestion)]!]}
+          explanation={aiQuestion.explanation}
+          onClose={() => setAiQuestion(null)}
+        />
+      )}
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10 shadow-sm">
         <h1 className="text-gray-800 font-bold">Test Results</h1>
         <p className="text-gray-500 text-xs">{selectedCourse?.code} — {selectedMode?.label}</p>
@@ -382,6 +488,12 @@ export default function MockTest() {
                 <p className="text-red-500 text-xs ml-6">✗ Your answer: {q.options[answers[i]!]}</p>
               )}
               <p className="text-gray-400 text-xs ml-6 mt-1 italic">{q.explanation}</p>
+              {answers[i] !== q.answer && (
+                <button onClick={() => setAiQuestion(q)}
+                  className="ml-6 mt-2 text-xs text-teal-600 border border-teal-400 px-3 py-1 rounded-full flex items-center gap-1">
+                  <Bot size={12} /> Ask AI
+                </button>
+              )}
             </div>
           ))}
         </div>
